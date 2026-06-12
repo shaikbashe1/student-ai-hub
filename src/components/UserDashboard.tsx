@@ -217,7 +217,7 @@ export default function UserDashboard({
                         <a 
                           href={job.apply_url} 
                           target="_blank" 
-                          rel="noopener"
+                          rel="noopener noreferrer"
                           className="text-[10.5px] font-bold text-indigo-400 hover:underline flex items-center space-x-1"
                         >
                           <span>Apply</span>
@@ -250,7 +250,7 @@ export default function UserDashboard({
                         <a 
                           href={hack.registration_url} 
                           target="_blank" 
-                          rel="noopener"
+                          rel="noopener noreferrer"
                           className="text-[10.5px] font-bold text-indigo-400 hover:underline flex items-center space-x-1"
                         >
                           <span>Register</span>
