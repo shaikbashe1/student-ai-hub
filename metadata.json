@@ -1,0 +1,6 @@
+{
+  "name": "Student AI Hub",
+  "description": "An all-in-one platform for students featuring an AI Coding Assistant, AI Tools Directory, Internship Portal, Hackathon Portal, User Dashboard, and Admin Dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

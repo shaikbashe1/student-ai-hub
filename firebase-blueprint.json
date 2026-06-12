@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "profile": {
+      "title": "Profile",
+      "description": "User profile with role and prompt count limits",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "daily_prompt_count": { "type": "integer" },
+        "last_prompt_date": { "type": "string", "format": "date" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role", "daily_prompt_count", "last_prompt_date", "created_at"]
+    },
+    "ai_tool": {
+      "title": "AITool",
+      "description": "AI Tool listed in the tools directory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "pricing": { "type": "string" },
+        "pros": { "type": "array" },
+        "cons": { "type": "array" },
+        "website_url": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug", "description", "category", "pricing", "website_url", "created_at"]
+    },
+    "internship": {
+      "title": "Internship",
+      "description": "Student internship details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "company": { "type": "string" },
+        "slug": { "type": "string" },
+        "role": { "type": "string" },
+        "location": { "type": "string" },
+        "is_remote": { "type": "boolean" },
+        "stipend": { "type": "string" },
+        "eligibility": { "type": "string" },
+        "deadline": { "type": "string", "format": "date" },
+        "apply_url": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "company", "slug", "role", "location", "is_remote", "stipend", "eligibility", "deadline", "apply_url", "created_at"]
+    },
+    "hackathon": {
+      "title": "Hackathon",
+      "description": "Hackathon details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "organizer": { "type": "string" },
+        "prize_pool": { "type": "string" },
+        "deadline": { "type": "string", "format": "date" },
+        "eligibility": { "type": "string" },
+        "registration_url": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug", "organizer", "prize_pool", "deadline", "eligibility", "registration_url", "created_at"]
+    },
+    "chat_session": {
+      "title": "ChatSession",
+      "description": "Session for coding assistant chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "title": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "user_id", "title", "created_at"]
+    },
+    "chat_message": {
+      "title": "ChatMessage",
+      "description": "Individual message within a chat session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "session_id", "role", "content", "created_at"]
+    },
+    "saved_item": {
+      "title": "SavedItem",
+      "description": "Starred or saved resources by user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "item_type": { "type": "string", "enum": ["tool", "internship", "hackathon"] },
+        "item_id": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "user_id", "item_type", "item_id", "created_at"]
+    },
+    "blog_post": {
+      "title": "BlogPost",
+      "description": "Article or blog post on the hub platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "content": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "cover_image": { "type": "string" },
+        "author": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "views": { "type": "integer" },
+        "likes": { "type": "integer" },
+        "category": { "type": "string" },
+        "seo_keywords": { "type": "array" },
+        "is_published": { "type": "boolean" }
+      },
+      "required": ["id", "title", "slug", "content", "excerpt", "author", "created_at", "views", "likes", "category", "seo_keywords", "is_published"]
+    },
+    "newsletter_subscriber": {
+      "title": "NewsletterSubscriber",
+      "description": "User subscribed to newsletter and alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "subscribed_to_digest": { "type": "boolean" }
+      },
+      "required": ["id", "email", "created_at", "subscribed_to_digest"]
+    }
+  },
+  "firestore": {
+    "/profiles/{profileId}": {
+      "schema": "profile",
+      "description": "Storage for user profiles"
+    },
+    "/ai_tools/{toolId}": {
+      "schema": "ai_tool",
+      "description": "List of directories for AI tools"
+    },
+    "/internships/{internshipId}": {
+      "schema": "internship",
+      "description": "Available student internships"
+    },
+    "/hackathons/{hackathonId}": {
+      "schema": "hackathon",
+      "description": "Available hackathons for registration"
+    },
+    "/chat_sessions/{sessionId}": {
+      "schema": "chat_session",
+      "description": "Sessions of Student AI coder chats"
+    },
+    "/chat_sessions/{sessionId}/messages/{messageId}": {
+      "schema": "chat_message",
+      "description": "Messages inside specific chat session"
+    },
+    "/saved_items/{savedItemId}": {
+      "schema": "saved_item",
+      "description": "Bookmarks or saved items for users"
+    },
+    "/blog_posts/{postId}": {
+      "schema": "blog_post",
+      "description": "Blog posts and articles published on the platform"
+    },
+    "/newsletter_subscribers/{subId}": {
+      "schema": "newsletter_subscriber",
+      "description": "Mailing list subscriptions for digest and job alerts"
+    }
+  }
+}

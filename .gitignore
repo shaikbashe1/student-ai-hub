@@ -1,0 +1,25 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Cache files
+.eslintcache
+.next/
+.vercel/
+.cache/
+
+# Firebase Service Account
+*-adminsdk-*.json
+*service-account*.json
+firebase-adminsdk.json
+
+# API Keys & Secrets
+*.pem
+*.key
+credentials.json
+secrets.json
