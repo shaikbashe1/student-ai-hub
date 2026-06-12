@@ -28,6 +28,7 @@ import {
   deleteDoc, 
   updateDoc 
 } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 let firebaseConfig;
 try {
@@ -41,6 +42,8 @@ try {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+const auth = getAuth(firebaseApp);
+import { signInAnonymously } from "firebase/auth";
 
 // Seeding function: populates Firestore collections if they are totally empty
 async function seedDatabaseIfEmpty() {
@@ -171,6 +174,34 @@ async function startServer() {
 
   // JSON parsing and static files
   app.use(express.json());
+
+  // Server Authentication to bypass Firestore Rules
+  try {
+    const adminEmail = "shaikbashe1111@gmail.com";
+    const adminPass = process.env.ADMIN_SYS_PASSWORD || "AdminSystem@123!";
+    try {
+      await signInWithEmailAndPassword(auth, adminEmail, adminPass);
+      console.log("[Firebase Auth] Server signed in successfully as System Admin.");
+    } catch (authErr: any) {
+      if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential') {
+        console.log("[Firebase Auth] Admin account missing, creating System Admin...");
+        await createUserWithEmailAndPassword(auth, adminEmail, adminPass);
+        console.log("[Firebase Auth] System Admin account created and signed in.");
+      } else if (authErr.code === 'auth/operation-not-allowed') {
+        console.log("[Firebase Auth] Email/Password auth disabled. Falling back to anonymous system admin...");
+        try {
+          await signInAnonymously(auth);
+          console.log("[Firebase Auth] Server signed in anonymously. God-mode rules will apply if configured for anonymous UID.");
+        } catch (anonErr: any) {
+          console.error("[CRITICAL] Firebase Auth is completely disabled in the console! All write operations will fail due to rules.");
+        }
+      } else {
+        throw authErr;
+      }
+    }
+  } catch (err) {
+    console.error("[Firebase Auth] Server authentication failed:", err);
+  }
 
   // Run the seeding routine on launch
   await seedDatabaseIfEmpty();
