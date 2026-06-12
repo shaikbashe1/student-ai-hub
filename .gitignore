@@ -18,6 +18,9 @@ coverage/
 *service-account*.json
 firebase-adminsdk.json
 
+# Firebase App Config (contains API keys — use firebase-applet-config.example.json as template)
+firebase-applet-config.json
+
 # API Keys & Secrets
 *.pem
 *.key

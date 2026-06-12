@@ -45,6 +45,26 @@ const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 const auth = getAuth(firebaseApp);
 import { signInAnonymously } from "firebase/auth";
 
+// -----------------------------------------------
+// Security helpers
+// -----------------------------------------------
+
+/** Validates a basic email format */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isValidEmail(email: string): boolean {
+  return EMAIL_REGEX.test(email);
+}
+
+/** Escapes XML special characters to prevent injection */
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 // Seeding function: populates Firestore collections if they are totally empty
 async function seedDatabaseIfEmpty() {
   try {
@@ -172,6 +192,13 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Validate critical environment variables on startup
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn("[STARTUP WARNING] GEMINI_API_KEY is not set. AI chat will fail on first use.");
+  } else {
+    console.log("[STARTUP] GEMINI_API_KEY is configured.");
+  }
+
   // JSON parsing and static files
   app.use(express.json());
 
@@ -216,6 +243,10 @@ async function startServer() {
       const { email, name } = req.body;
       if (!email) {
         res.status(400).json({ error: "Email is required" });
+        return;
+      }
+      if (!isValidEmail(email)) {
+        res.status(400).json({ error: "Invalid email format" });
         return;
       }
 
@@ -476,7 +507,7 @@ async function startServer() {
       try {
         const ai = getGeminiClient();
         const geminiResponse = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
+          model: "gemini-2.0-flash",
           contents: queryPrompt,
           config: {
             systemInstruction: "You are an expert programming tutor helping students. Only answer coding and tech-related questions. Code snippets should be formatted inside elegant markdown code-blocks matching the programming language."
@@ -1056,6 +1087,10 @@ async function startServer() {
         res.status(400).json({ error: "Email target is required" });
         return;
       }
+      if (!isValidEmail(email)) {
+        res.status(400).json({ error: "Invalid email format" });
+        return;
+      }
 
       // Safeguard using rate limits
       const ipCheck = rateLimit(req.ip || "unknown-sub", 5, 60000); // 5 subscribes/min max
@@ -1174,7 +1209,7 @@ Sitemap: ${req.protocol}://${req.get("host")}/sitemap.xml
     <link>${host}/blog/${b.slug}</link>
     <guid>${host}/blog/${b.slug}</guid>
     <description><![CDATA[${b.excerpt}]]></description>
-    <author>${b.author}</author>
+    <author>${escapeXml(b.author)}</author>
     <pubDate>${new Date(b.created_at).toUTCString()}</pubDate>
   </item>`;
       }
@@ -1191,8 +1226,13 @@ Sitemap: ${req.protocol}://${req.get("host")}/sitemap.xml
   app.get("/api/og", (req, res) => {
     const titleQuery = (req.query.title as string) || "Student AI Hub — Tech Blueprint Portal";
     
-    // Safely wrap text inside SVG
-    const safeTitle = titleQuery.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Safely wrap text inside SVG — escape all XML special chars including quotes
+    const safeTitle = titleQuery
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
 
     const svg = `
       <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">

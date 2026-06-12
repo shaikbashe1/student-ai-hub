@@ -45,6 +45,12 @@ export default function AdminPanel({
     }
   }, [currentUser, activeTab]);
 
+  /** Helper: always send admin identity via x-user-id header */
+  const adminHeaders = () => ({
+    "Content-Type": "application/json",
+    "x-user-id": currentUser?.id ?? ""
+  });
+
   const syncAllData = async () => {
     setIsSyncing(true);
     try {
@@ -61,7 +67,9 @@ export default function AdminPanel({
         const data = await res.json();
         if (data.hackathons) setHackathons(data.hackathons);
       } else if (activeTab === "users") {
-        const res = await fetch(`/api/admin/users?adminId=${currentUser?.id}`);
+        const res = await fetch(`/api/admin/users`, {
+          headers: { "x-user-id": currentUser?.id ?? "" }
+        });
         const data = await res.json();
         if (data.users) setUsers(data.users);
       } else if (activeTab === "blog") {
@@ -82,17 +90,10 @@ export default function AdminPanel({
     if (!editingTool || !currentUser) return;
 
     try {
-      const isNew = !editingTool.id;
-      const url = isNew ? "/api/admin/tool" : `/api/admin/tool?id=${editingTool.id}`;
-      const method = isNew ? "POST" : "PUT";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminId: currentUser.id,
-          ...editingTool
-        }),
+      const res = await fetch("/api/admin/tools", {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify({ tool: editingTool }),
       });
 
       if (res.ok) {
@@ -110,8 +111,9 @@ export default function AdminPanel({
     if (!currentUser) return;
     if (!confirm("Are you sure you want to delete this AI Tool listing?")) return;
     try {
-      const res = await fetch(`/api/admin/tool?id=${id}&adminId=${currentUser.id}`, {
+      const res = await fetch(`/api/admin/tools/${id}`, {
         method: "DELETE",
+        headers: { "x-user-id": currentUser.id }
       });
       if (res.ok) {
         syncAllData();
@@ -128,17 +130,10 @@ export default function AdminPanel({
     if (!editingInternship || !currentUser) return;
 
     try {
-      const isNew = !editingInternship.id;
-      const url = isNew ? "/api/admin/internship" : `/api/admin/internship?id=${editingInternship.id}`;
-      const method = isNew ? "POST" : "PUT";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminId: currentUser.id,
-          ...editingInternship
-        }),
+      const res = await fetch("/api/admin/internships", {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify({ internship: editingInternship }),
       });
 
       if (res.ok) {
@@ -156,8 +151,9 @@ export default function AdminPanel({
     if (!currentUser) return;
     if (!confirm("Are you sure you want to delete this Internship vacancy?")) return;
     try {
-      const res = await fetch(`/api/admin/internship?id=${id}&adminId=${currentUser.id}`, {
+      const res = await fetch(`/api/admin/internships/${id}`, {
         method: "DELETE",
+        headers: { "x-user-id": currentUser.id }
       });
       if (res.ok) {
         syncAllData();
@@ -174,17 +170,10 @@ export default function AdminPanel({
     if (!editingHackathon || !currentUser) return;
 
     try {
-      const isNew = !editingHackathon.id;
-      const url = isNew ? "/api/admin/hackathon" : `/api/admin/hackathon?id=${editingHackathon.id}`;
-      const method = isNew ? "POST" : "PUT";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminId: currentUser.id,
-          ...editingHackathon
-        }),
+      const res = await fetch("/api/admin/hackathons", {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify({ hackathon: editingHackathon }),
       });
 
       if (res.ok) {
@@ -202,8 +191,9 @@ export default function AdminPanel({
     if (!currentUser) return;
     if (!confirm("Are you sure you want to delete this Hackathon?")) return;
     try {
-      const res = await fetch(`/api/admin/hackathon?id=${id}&adminId=${currentUser.id}`, {
+      const res = await fetch(`/api/admin/hackathons/${id}`, {
         method: "DELETE",
+        headers: { "x-user-id": currentUser.id }
       });
       if (res.ok) {
         syncAllData();
@@ -220,11 +210,8 @@ export default function AdminPanel({
     try {
       const res = await fetch("/api/admin/blog", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminId: currentUser.id,
-          post: blogData
-        })
+        headers: adminHeaders(),
+        body: JSON.stringify({ post: blogData })
       });
       if (res.ok) {
         setEditorOpen(false);
@@ -240,8 +227,9 @@ export default function AdminPanel({
     if (!currentUser) return;
     if (!confirm("Are you sure you want to delete this strategic publication?")) return;
     try {
-      const res = await fetch(`/api/admin/blog/${id}?adminId=${currentUser.id}`, {
-        method: "DELETE"
+      const res = await fetch(`/api/admin/blog/${id}`, {
+        method: "DELETE",
+        headers: { "x-user-id": currentUser.id }
       });
       if (res.ok) {
         syncAllData();

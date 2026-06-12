@@ -6,6 +6,7 @@ export interface Profile {
   daily_prompt_count: number;
   last_prompt_date: string; // YYYY-MM-DD
   created_at: string;
+  saved_items?: string[]; // populated from saved_items collection on auth responses
 }
 
 export interface AITool {

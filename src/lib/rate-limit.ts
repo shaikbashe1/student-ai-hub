@@ -48,3 +48,16 @@ export function rateLimit(key: string, limit: number = 30, windowMs: number = 60
     reset: entry.resetAt
   };
 }
+
+// Cleanup expired entries every 5 minutes to prevent unbounded memory growth
+const cleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const key of Object.keys(store)) {
+    if (store[key].resetAt < now) {
+      delete store[key];
+    }
+  }
+}, 5 * 60 * 1000);
+
+// Prevent the interval from keeping the Node.js process alive on shutdown
+cleanupInterval.unref();

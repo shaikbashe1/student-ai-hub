@@ -68,17 +68,16 @@ export default function BlogView({ currentUser, onOpenLogin }: BlogViewProps) {
     });
 
     // Request views increment to backend Express proxy
-    try {
-      fetch(`/api/blog/${post.slug}/view`, { method: "PUT" }).then(res => {
+    fetch(`/api/blog/${post.slug}/view`, { method: "PUT" })
+      .then(res => {
         if (res.ok) {
           // Increment views count locally for instant UI update
           setPosts(prev => prev.map(p => p.id === post.id ? { ...p, views: p.views + 1 } : p));
           setSelectedPost(prev => prev ? { ...prev, views: prev.views + 1 } : null);
         }
-      });
-    } catch (err) {
-      console.error(err);
-    }
+      })
+      .catch(err => console.error("View increment failed:", err));
+
   };
 
   const handleNewsletterSubscribe = async (e: React.FormEvent) => {

@@ -51,7 +51,7 @@ export default function ChatAssistant({
     } else {
       setMessages([]);
     }
-  }, [currentSessionId]);
+  }, [currentSessionId, currentUser]);
 
   // Scroll to bottom helper
   useEffect(() => {
