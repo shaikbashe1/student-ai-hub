@@ -4,6 +4,8 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import fs from "fs";
+import helmet from "helmet";
+import { randomUUID } from "crypto";
 
 // Load environment variables
 dotenv.config();
@@ -199,7 +201,13 @@ async function startServer() {
     console.log("[STARTUP] GEMINI_API_KEY is configured.");
   }
 
-  // JSON parsing and static files
+  // Security headers (X-Frame-Options, CSP, HSTS, X-Content-Type, etc.)
+  app.use(helmet({
+    contentSecurityPolicy: false, // disabled to allow Vite HMR in dev
+    crossOriginEmbedderPolicy: false
+  }));
+
+  // JSON body parser
   app.use(express.json());
 
   // Server Authentication to bypass Firestore Rules
@@ -260,7 +268,7 @@ async function startServer() {
 
       if (snap.empty) {
         // Create brand-new user profile
-        const profileId = "usr_" + Math.random().toString(36).substr(2, 9);
+        const profileId = "usr_" + randomUUID().replace(/-/g, "").slice(0, 12);
         profile = {
           id: profileId,
           name: name || email.split("@")[0],
@@ -410,7 +418,7 @@ async function startServer() {
         }
       } else {
         // Create new star bookmark record
-        const savedItemId = "save_" + Math.random().toString(36).substr(2, 9);
+        const savedItemId = "save_" + randomUUID().replace(/-/g, "").slice(0, 12);
         await setDoc(doc(db, "saved_items", savedItemId), {
           id: savedItemId,
           user_id: userId,
@@ -469,7 +477,7 @@ async function startServer() {
       // 2. Chat Session Setup (find or create new)
       let activeSessionId = sessionId;
       if (!activeSessionId || activeSessionId === "new") {
-        activeSessionId = "sess_" + Math.random().toString(36).substr(2, 9);
+        activeSessionId = "sess_" + randomUUID().replace(/-/g, "").slice(0, 12);
         const sessionTitle = message.length > 40 ? `${message.substring(0, 37)}...` : message;
         await setDoc(doc(db, "chat_sessions", activeSessionId), {
           id: activeSessionId,
@@ -480,7 +488,7 @@ async function startServer() {
       }
 
       // Save user chat message
-      const userMessageId = "msg_" + Math.random().toString(36).substr(2, 9);
+      const userMessageId = "msg_" + randomUUID().replace(/-/g, "").slice(0, 12);
       await setDoc(doc(db, "chat_sessions", activeSessionId, "messages", userMessageId), {
         id: userMessageId,
         session_id: activeSessionId,
@@ -517,7 +525,7 @@ async function startServer() {
         const assistantReplyText = geminiResponse.text || "I was unable to formulate a code answer. Please try again with simple coding-related queries.";
 
         // Save assistant chat message
-        const assistantMessageId = "msg_" + Math.random().toString(36).substr(2, 9);
+        const assistantMessageId = "msg_" + randomUUID().replace(/-/g, "").slice(0, 12);
         await setDoc(doc(db, "chat_sessions", activeSessionId, "messages", assistantMessageId), {
           id: assistantMessageId,
           session_id: activeSessionId,
@@ -790,7 +798,7 @@ async function startServer() {
           await deleteDoc(doc(db, "saved_items", docObj.id));
         }
       } else {
-        const savedItemId = "save_" + Math.random().toString(36).substr(2, 9);
+        const savedItemId = "save_" + randomUUID().replace(/-/g, "").slice(0, 12);
         await setDoc(doc(db, "saved_items", savedItemId), {
           id: savedItemId,
           user_id: userId,
@@ -849,7 +857,7 @@ async function startServer() {
       }
 
       const slug = toolData.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-");
-      const toolId = toolData.id || "tool_" + Math.random().toString(36).substr(2, 9);
+      const toolId = toolData.id || "tool_" + randomUUID().replace(/-/g, "").slice(0, 12);
       const finalTool: AITool = {
         id: toolId,
         name: toolData.name,
@@ -891,7 +899,7 @@ async function startServer() {
 
       const slug = `${internshipData.company.toLowerCase().trim()}-${internshipData.role.toLowerCase().trim()}`
         .replace(/[^a-z0-9]+/g, "-");
-      const intId = internshipData.id || "int_" + Math.random().toString(36).substr(2, 9);
+      const intId = internshipData.id || "int_" + randomUUID().replace(/-/g, "").slice(0, 12);
       const finalInternship: Internship = {
         id: intId,
         company: internshipData.company,
@@ -933,7 +941,7 @@ async function startServer() {
       }
 
       const slug = hackathonData.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-");
-      const hackId = hackathonData.id || "hack_" + Math.random().toString(36).substr(2, 9);
+      const hackId = hackathonData.id || "hack_" + randomUUID().replace(/-/g, "").slice(0, 12);
       const finalHackathon: Hackathon = {
         id: hackId,
         name: hackathonData.name,
@@ -1036,7 +1044,7 @@ async function startServer() {
         return;
       }
 
-      const id = postData.id || "post_" + Math.random().toString(36).substr(2, 9);
+      const id = postData.id || "post_" + randomUUID().replace(/-/g, "").slice(0, 12);
       const slug = postData.slug || postData.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
       
       const finalPost: BlogPost = {
@@ -1100,7 +1108,7 @@ async function startServer() {
       }
 
       const lowerEmail = email.toLowerCase().trim();
-      const subId = "sub_" + Math.random().toString(36).substr(2, 9);
+      const subId = "sub_" + randomUUID().replace(/-/g, "").slice(0, 12);
 
       const newSubscriber = {
         id: subId,

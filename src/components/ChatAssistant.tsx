@@ -188,7 +188,7 @@ export default function ChatAssistant({
         const match = part.match(/```(\w*)\n([\s\S]*?)```/);
         const lang = match ? match[1] : selectedLanguage.toLowerCase();
         const code = match ? match[2] : part.slice(3, -3);
-        const blockId = `code_${index}_${Math.random().toString(36).substr(2, 4)}`;
+        const blockId = `code_${index}_${Math.random().toString(36).slice(2, 6)}`;
 
         return (
           <div key={index} className="my-4 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden shadow-lg">
