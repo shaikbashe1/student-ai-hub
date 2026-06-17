@@ -50,7 +50,7 @@ export default function BlogCard({ post, onClick }: BlogCardProps) {
 
         {/* Footer stat metrics */}
         <div className="pt-3 border-t border-slate-900/60 flex items-center justify-between">
-          <span className="text-[10px] text-slate-500 font-medium">By <strong className="text-slate-300 font-bold">{post.author}</strong></span>
+          <span className="text-[10px] text-slate-500 font-medium">By <strong className="text-slate-300 font-bold">{post.author || post.author_name}</strong></span>
           
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">

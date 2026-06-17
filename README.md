@@ -8,6 +8,10 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/0ab58b7f-884c-4616-8a84-bc73ef1fd9ea
 
+### Deployed URLs
+- **Production URL:** [https://student-ai-hub-five.vercel.app](https://student-ai-hub-five.vercel.app)
+- **Deployment Preview:** [https://student-ai-b4l1zd23p-shaik-bashes-projects.vercel.app](https://student-ai-b4l1zd23p-shaik-bashes-projects.vercel.app)
+
 ## Run Locally
 
 **Prerequisites:**  Node.js

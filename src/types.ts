@@ -24,6 +24,8 @@ export interface Profile {
   saved_items: string[];
   created_at: string;
   updated_at: string;
+  daily_prompt_count: number;
+  last_prompt_date: string;
 }
 
 export type AIToolCategory =
@@ -171,6 +173,7 @@ export interface BlogPost {
   seo_keywords: string[];
   is_published: boolean;
   reading_time_minutes: number;
+  author?: string;
 }
 
 export type ProgrammingLanguage = 'python' | 'javascript' | 'java' | 'cpp' | 'c';
@@ -301,4 +304,19 @@ export interface HackathonDisplay {
   url: string;
   is_online: boolean;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
+}
+
+export interface ChatSession {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  created_at: string;
 }

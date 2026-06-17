@@ -15,7 +15,7 @@ export default function PricingPage() {
     try {
       const key = `${plan}_${billing}` as keyof typeof STRIPE_PRICE_IDS;
       const priceId = STRIPE_PRICE_IDS[key] ?? '';
-      if (priceId) await createCheckoutSession(priceId, user.uid, user.email ?? '');
+      if (priceId) await createCheckoutSession(priceId, user.id, user.email ?? '');
     } catch { /* handled in lib */ }
     finally { setLoading(null); }
   };
