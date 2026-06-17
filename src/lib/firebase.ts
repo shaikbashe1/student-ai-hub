@@ -1,63 +1,91 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { initializeApp, getApps } from 'firebase/app';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signOut,
+  onAuthStateChanged,
+  type User,
+} from 'firebase/auth';
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
+  getDocs,
+  onSnapshot,
+  serverTimestamp,
+  increment,
+  addDoc,
+  type DocumentSnapshot,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
-// Initialize Firebase client Core
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
-export const auth = getAuth(app);
-
-// -------------------------------------------------------------------------
-// Strict Authentication Exception Mapping & ABAC Error Handling Compliance
-// -------------------------------------------------------------------------
-
-export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
+// Support both env-var config (CI/prod) and local JSON config (dev)
+function getFirebaseConfig() {
+  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+  if (apiKey) {
+    return {
+      apiKey,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    };
   }
-}
-
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid || null,
-      email: auth.currentUser?.email || null,
-      emailVerified: auth.currentUser?.emailVerified || null,
-      isAnonymous: auth.currentUser?.isAnonymous || null,
-    },
-    operationType,
-    path
+  // Fallback to local JSON config (development only)
+  return {
+    apiKey: 'demo-key',
+    authDomain: 'demo.firebaseapp.com',
+    projectId: 'demo-project',
+    storageBucket: 'demo.appspot.com',
+    messagingSenderId: '123456',
+    appId: '1:123456:web:abcdef',
   };
-  console.error('Firestore Error Detailed info: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
 }
 
-// Check Firestore validation on boot
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration or network status.");
-    }
-  }
-}
-testConnection();
+const firebaseConfig = getFirebaseConfig();
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+
+const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const signInWithEmail = (email: string, password: string) =>
+  signInWithEmailAndPassword(auth, email, password);
+export const registerWithEmail = async (email: string, password: string) => {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  await sendEmailVerification(cred.user);
+  return cred;
+};
+export const resetPassword = (email: string) => sendPasswordResetEmail(auth, email);
+export const logout = () => signOut(auth);
+export const onAuthChanged = (cb: (user: User | null) => void) =>
+  onAuthStateChanged(auth, cb);
+
+export {
+  doc, getDoc, setDoc, updateDoc, collection, query, where,
+  orderBy, limit, startAfter, getDocs, onSnapshot, serverTimestamp,
+  increment, addDoc,
+};
+export type { DocumentSnapshot, QueryDocumentSnapshot, User };
 export default app;

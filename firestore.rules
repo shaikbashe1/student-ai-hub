@@ -2,233 +2,105 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Global Safety Net default-deny catch-all
-    match /{document=**} {
-      allow read, write: if false;
+    function isAuth() { return request.auth != null; }
+    function isOwner(uid) { return isAuth() && request.auth.uid == uid; }
+    function getRole() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    function hasRole(role) { return isAuth() && getRole() == role; }
+    function isAdmin() { return hasRole('admin'); }
+    function isMentor() { return hasRole('mentor') || isAdmin(); }
+    function isRecruiter() { return hasRole('recruiter') || isAdmin(); }
+
+    // Users collection
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && request.resource.data.role == 'student';
+      allow update: if isOwner(uid) && (
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'plan', 'daily_ai_limit'])
+      ) || isAdmin();
+      allow delete: if isAdmin();
     }
 
-    // --- SYSTEM ADMIN BYPASS ---
-    // The backend server authenticates as the System Admin to bypass rules
-    match /{document=**} {
-      allow read, write: if request.auth != null && request.auth.token.email == 'shaikbashe1111@gmail.com';
-    }
-
-    // --- REUSABLE HARDENED GLOBAL HELPERS ---
-    
-    function isValidId(id) { 
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
-    }
-    
-    function incoming() { 
-      return request.resource.data; 
-    }
-    
-    function existing() { 
-      return resource.data; 
-    }
-    
-    function isSignedIn() { 
-      return request.auth != null; 
-    }
-    
-    // Admin configuration check: fetches role on existing profile matching request auth uid
-    function isAdmin() { 
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin'; 
-    }
-
-    // --- VALIDATION SCHEMAS ---
-
-    function isValidProfile(data) {
-      return data.keys().hasAll(['id', 'name', 'email', 'role', 'daily_prompt_count', 'last_prompt_date', 'created_at'])
-        && data.keys().size() == 7
-        && data.id == request.auth.uid
-        && data.email == request.auth.token.email
-        && data.role in ['student', 'admin']
-        && (data.role == 'student' || request.auth.token.email == 'shaikbashe1111@gmail.com')
-        && data.daily_prompt_count is int
-        && data.daily_prompt_count <= 20
-        && data.last_prompt_date is string
-        && data.created_at == request.time;
-    }
-
-    function isValidTool(data) {
-      return data.keys().hasAll(['id', 'name', 'slug', 'description', 'category', 'pricing', 'website_url', 'created_at'])
-        && data.keys().size() == 8
-        && data.id is string && data.id.size() <= 128
-        && data.name is string && data.name.size() <= 100
-        && data.slug is string && data.slug.size() <= 100
-        && data.description is string && data.description.size() <= 1000
-        && data.category is string && data.category.size() <= 50
-        && data.pricing is string && data.pricing.size() <= 50
-        && data.website_url is string && data.website_url.size() <= 500;
-    }
-
-    function isValidInternship(data) {
-      return data.keys().hasAll(['id', 'company', 'slug', 'role', 'location', 'is_remote', 'stipend', 'eligibility', 'deadline', 'apply_url', 'created_at'])
-        && data.keys().size() == 11
-        && data.company is string && data.company.size() <= 100
-        && data.slug is string && data.slug.size() <= 150
-        && data.role is string && data.role.size() <= 100
-        && data.location is string && data.location.size() <= 100
-        && data.is_remote is bool
-        && data.stipend is string && data.stipend.size() <= 100
-        && data.eligibility is string && data.eligibility.size() <= 200
-        && data.deadline is string && data.deadline.size() <= 20
-        && data.apply_url is string && data.apply_url.size() <= 500;
-    }
-
-    function isValidHackathon(data) {
-      return data.keys().hasAll(['id', 'name', 'slug', 'organizer', 'prize_pool', 'deadline', 'eligibility', 'registration_url', 'created_at'])
-        && data.keys().size() == 9
-        && data.name is string && data.name.size() <= 150
-        && data.slug is string && data.slug.size() <= 150
-        && data.organizer is string && data.organizer.size() <= 100
-        && data.prize_pool is string && data.prize_pool.size() <= 100
-        && data.deadline is string && data.deadline.size() <= 20
-        && data.eligibility is string && data.eligibility.size() <= 200
-        && data.registration_url is string && data.registration_url.size() <= 500;
-    }
-
-    function isValidChatSession(data) {
-      return data.keys().hasAll(['id', 'user_id', 'title', 'created_at'])
-        && data.keys().size() == 4
-        && data.user_id == request.auth.uid
-        && data.title is string && data.title.size() <= 200;
-    }
-
-    function isValidChatMessage(data, sessId) {
-      return data.keys().hasAll(['id', 'session_id', 'role', 'content', 'created_at'])
-        && data.keys().size() == 5
-        && data.session_id == sessId
-        && data.role in ['user', 'assistant']
-        && data.content is string && data.content.size() <= 5000;
-    }
-
-    function isValidSavedItem(data) {
-      return data.keys().hasAll(['id', 'user_id', 'item_type', 'item_id', 'created_at'])
-        && data.keys().size() == 5
-        && data.user_id == request.auth.uid
-        && data.item_type in ['tool', 'internship', 'hackathon']
-        && data.item_id is string && data.item_id.size() <= 128;
-    }
-
-    function isValidBlogPost(data) {
-      return data.keys().hasAll(['id', 'title', 'slug', 'content', 'excerpt', 'author', 'created_at', 'views', 'likes', 'category', 'seo_keywords', 'is_published'])
-        && (data.keys().size() == 12 || (data.keys().size() == 13 && data.keys().hasAll(['cover_image'])))
-        && data.title is string && data.title.size() <= 150
-        && data.slug is string && data.slug.size() <= 150
-        && data.content is string && data.content.size() <= 60000
-        && data.excerpt is string && data.excerpt.size() <= 500
-        && data.author is string && data.author.size() <= 100
-        && data.views is int
-        && data.likes is int
-        && data.category is string && data.category.size() <= 50
-        && data.seo_keywords is list
-        && data.is_published is bool;
-    }
-
-    function isValidNewsletterSubscriber(data) {
-      return data.keys().hasAll(['id', 'email', 'created_at', 'subscribed_to_digest'])
-        && data.keys().size() == 4
-        && data.email is string && data.email.size() <= 150
-        && data.subscribed_to_digest is bool;
-    }
-
-    // --- COLLECTION RULES MATCH BLOCKS ---
-
-    // 1. User Profiles
-    match /profiles/{profileId} {
-      allow get: if isSignedIn() && (request.auth.uid == profileId || isAdmin());
-      allow list: if isSignedIn() && isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == profileId && isValidProfile(incoming());
-      
-      allow update: if isSignedIn() && (
-        isAdmin() ||
-        (request.auth.uid == profileId && 
-         incoming().id == existing().id &&
-         incoming().email == existing().email &&
-         incoming().role == existing().role &&
-         incoming().created_at == existing().created_at &&
-         (
-           // Action: Spend daily query limit
-           (incoming().daily_prompt_count == existing().daily_prompt_count - 1 && incoming().last_prompt_date == existing().last_prompt_date && incoming().diff(existing()).affectedKeys().hasOnly(['daily_prompt_count'])) ||
-           // Action: Reset daily limit on new day
-           (incoming().daily_prompt_count == 20 && incoming().last_prompt_date != existing().last_prompt_date && incoming().diff(existing()).affectedKeys().hasOnly(['daily_prompt_count', 'last_prompt_date'])) ||
-           // Action: Name profile update
-           (incoming().name is string && incoming().name.size() <= 80 && incoming().diff(existing()).affectedKeys().hasOnly(['name']))
-         )
-        )
-      );
-    }
-
-    // 2. AI Tools Directory
-    match /ai_tools/{toolId} {
-      allow read, get: if true;
-      allow create: if isSignedIn() && isAdmin() && isValidTool(incoming()) && isValidId(toolId);
-      allow update: if isSignedIn() && isAdmin() && isValidTool(incoming()) && isValidId(toolId);
-      allow delete: if isSignedIn() && isAdmin() && isValidId(toolId);
-    }
-
-    // 3. Student Internships
-    match /internships/{internshipId} {
-      allow read, get: if true;
-      allow create: if isSignedIn() && isAdmin() && isValidInternship(incoming()) && isValidId(internshipId);
-      allow update: if isSignedIn() && isAdmin() && isValidInternship(incoming()) && isValidId(internshipId);
-      allow delete: if isSignedIn() && isAdmin() && isValidId(internshipId);
-    }
-
-    // 4. Hackathons Portal
-    match /hackathons/{hackathonId} {
-      allow read, get: if true;
-      allow create: if isSignedIn() && isAdmin() && isValidHackathon(incoming()) && isValidId(hackathonId);
-      allow update: if isSignedIn() && isAdmin() && isValidHackathon(incoming()) && isValidId(hackathonId);
-      allow delete: if isSignedIn() && isAdmin() && isValidId(hackathonId);
-    }
-
-    // 5. Chat Sessions of Assistant tool
-    match /chat_sessions/{sessionId} {
-      allow read, get, delete: if isSignedIn() && (existing().user_id == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && incoming().user_id == request.auth.uid && isValidId(sessionId) && isValidChatSession(incoming());
-      allow update: if isSignedIn() && existing().user_id == request.auth.uid && incoming().user_id == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title']);
-      
-      // Nested Chat Messages (Master Gate Sync)
-      match /messages/{messageId} {
-        allow read, get: if isSignedIn() && (get(/databases/$(database)/documents/chat_sessions/$(sessionId)).data.user_id == request.auth.uid || isAdmin());
-        allow create: if isSignedIn() && get(/databases/$(database)/documents/chat_sessions/$(sessionId)).data.user_id == request.auth.uid && isValidId(messageId) && isValidChatMessage(incoming(), sessionId);
-        allow update, delete: if false; // Messages are immutable
+    // AI Conversations
+    match /ai_conversations/{convId} {
+      allow read, write: if isAuth() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuth() && request.resource.data.user_id == request.auth.uid;
+      match /messages/{msgId} {
+        allow read, write: if isAuth();
       }
     }
 
-    // 6. Saved / Bookmarked Items
-    match /saved_items/{savedItemId} {
-      allow read, get, delete: if isSignedIn() && (existing().user_id == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && incoming().user_id == request.auth.uid && isValidId(savedItemId) && isValidSavedItem(incoming());
-      allow update: if false; // Saved items don't undergo updates
-    }
-
-    // 7. Blog Posts
-    match /blog_posts/{postId} {
-      allow get, list: if true;
-      allow create: if isSignedIn() && isAdmin() && isValidId(postId) && isValidBlogPost(incoming());
-      allow update: if isSignedIn() && (
-        isAdmin() && isValidBlogPost(incoming()) && isValidId(postId)
-      ) || (
-        // Allow readers to increment views counter cleanly
-        incoming().diff(existing()).affectedKeys().hasOnly(['views']) &&
-        incoming().views == existing().views + 1 &&
-        incoming().title == existing().title &&
-        incoming().slug == existing().slug
+    // Resume analyses — user-scoped
+    match /resume_analyses/{docId} {
+      allow read, write: if isAuth() && (
+        resource == null || resource.data.user_id == request.auth.uid
       );
-      allow delete: if isSignedIn() && isAdmin() && isValidId(postId);
     }
 
-    // 8. Newsletter Subscribers
-    match /newsletter_subscribers/{subId} {
-      allow read, get, list: if isSignedIn() && isAdmin();
-      allow create: if isValidId(subId) && isValidNewsletterSubscriber(incoming());
-      allow delete: if isSignedIn() && isAdmin() && isValidId(subId);
-      allow update: if isSignedIn() && isAdmin() && isValidNewsletterSubscriber(incoming()) && isValidId(subId);
+    // Learning roadmaps — user-scoped
+    match /learning_roadmaps/{docId} {
+      allow read, write: if isAuth() && (
+        resource == null || resource.data.user_id == request.auth.uid
+      );
+    }
+
+    // Study plans — user-scoped
+    match /study_plans/{docId} {
+      allow read, write: if isAuth() && (
+        resource == null || resource.data.user_id == request.auth.uid
+      );
+    }
+
+    // Code submissions — user-scoped
+    match /code_submissions/{docId} {
+      allow read, write: if isAuth() && (
+        resource == null || resource.data.user_id == request.auth.uid
+      );
+    }
+
+    // Blog posts — public read if published, mentor/admin write
+    match /blog_posts/{postId} {
+      allow read: if resource.data.status == 'published' || isMentor();
+      allow create, update: if isMentor();
+      allow delete: if isAdmin();
+    }
+
+    // Internships — public read, recruiter/admin write
+    match /internships/{itemId} {
+      allow read: if true;
+      allow create, update: if isRecruiter();
+      allow delete: if isAdmin();
+    }
+
+    // Hackathons — public read, admin write
+    match /hackathons/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Coding challenges — public read, admin write
+    match /coding_challenges/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Subscriptions — user read, no direct write (webhook only)
+    match /subscriptions/{subId} {
+      allow read: if isAuth() && resource.data.user_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Achievements — user read, function write only
+    match /achievements/{docId} {
+      allow read: if isAuth() && resource.data.user_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Audit logs — write-only for auth users, admin read
+    match /audit_logs/{logId} {
+      allow create: if isAuth();
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
   }
 }
