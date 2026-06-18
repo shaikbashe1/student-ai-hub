@@ -1,18 +1,62 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Student AI Hub - Accelerate your academic and professional path with verified AI tools, internships, hackathons, and strategic advice." />
-    <meta name="keywords" content="AI tools, student hub, internships, hackathons, coding assistant" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- SEO -->
+    <title>Student AI Hub | AI Tools, Internships & Hackathons for Students</title>
+    <meta name="description" content="Student AI Hub — Your AI-powered co-pilot for career growth. Discover top AI tools, live internships, hackathons, AI resume analysis, mock interviews, and a coding assistant." />
+    <meta name="keywords" content="student AI, internships for students, hackathons, AI tools, AI resume analyzer, mock interview, coding assistant, gemini AI" />
+    <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#0f172a" />
-    <title>Student AI Hub | Professional Developer Sandbox</title>
-    <!-- Placeholder for AdSense Compliance -->
-    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+    <link rel="canonical" href="https://student-ai-hub.vercel.app" />
+
+    <!-- Open Graph -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="Student AI Hub | AI-Powered Student Platform" />
+    <meta property="og:description" content="Discover AI tools, internships, hackathons, and AI-powered career features built for students." />
+    <meta property="og:image"       content="/og-image.png" />
+    <meta property="og:url"         content="https://student-ai-hub.vercel.app" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Student AI Hub" />
+    <meta name="twitter:description" content="AI tools, internships, hackathons and career AI — built for students." />
+    <meta name="twitter:image"       content="/og-image.png" />
+
+    <!-- PWA / App icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Google Fonts — Inter + Space Grotesk + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- JSON-LD Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Student AI Hub",
+      "url": "https://student-ai-hub.vercel.app",
+      "description": "AI-powered platform for students: tools directory, internships, hackathons, AI coding assistant, resume analyzer, mock interviews.",
+      "applicationCategory": "EducationalApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

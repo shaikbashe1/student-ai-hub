@@ -311,6 +311,92 @@ async function startServer() {
     }
   });
 
+  // ── Supabase OAuth / Email Auth Profile Sync ──────────────────────────────
+  // Called by AuthContext.fetchOrCreateProfile after every Supabase sign-in.
+  // Uses the Supabase UID as the Firestore document ID so that the same user
+  // always maps to the same profile regardless of how they sign in.
+  app.post("/api/auth/supabase-login", async (req, res) => {
+    try {
+      const { supabase_uid, email, name, avatar_url } = req.body;
+
+      if (!supabase_uid || !email) {
+        res.status(400).json({ error: "supabase_uid and email are required" });
+        return;
+      }
+      if (!isValidEmail(email)) {
+        res.status(400).json({ error: "Invalid email format" });
+        return;
+      }
+
+      const lowerEmail   = email.toLowerCase().trim();
+      const ADMIN_EMAIL  = "shaikbashe1111@gmail.com";
+      const isAdminEmail = lowerEmail === ADMIN_EMAIL;
+
+      // Try to find existing profile by Supabase UID first (most reliable)
+      const profileRef  = doc(db, "profiles", supabase_uid);
+      const profileSnap = await getDoc(profileRef);
+
+      let profile: Profile;
+
+      if (!profileSnap.exists()) {
+        // ── First sign-in: create new profile ─────────────────────────────────
+        const today = new Date().toISOString().split("T")[0];
+        profile = {
+          id:                 supabase_uid,
+          name:               (name || lowerEmail.split("@")[0]).trim(),
+          email:              lowerEmail,
+          avatar_url:         avatar_url || undefined,
+          role:               isAdminEmail ? "admin" : "student",
+          plan:               "free",
+          daily_prompt_count: 20,
+          last_prompt_date:   today,
+          created_at:         new Date().toISOString(),
+        } as any;
+        await setDoc(profileRef, profile);
+        console.log(`[Auth] New profile created for ${lowerEmail} (uid: ${supabase_uid})`);
+      } else {
+        // ── Returning user: update mutable fields ──────────────────────────────
+        profile = profileSnap.data() as Profile;
+        const updates: Record<string, any> = {};
+
+        // Refresh avatar from Google if changed
+        if (avatar_url && avatar_url !== (profile as any).avatar_url) {
+          updates.avatar_url = avatar_url;
+        }
+        // Sync display name if provided and changed
+        if (name && name.trim() !== profile.name) {
+          updates.name = name.trim();
+        }
+        // Promote to admin if email matches
+        if (isAdminEmail && profile.role !== "admin") {
+          updates.role = "admin";
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateDoc(profileRef, updates);
+          Object.assign(profile, updates);
+        }
+      }
+
+      // ── Daily prompt counter reset ────────────────────────────────────────────
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (profile.last_prompt_date !== todayStr) {
+        const resetCount = (profile as any).plan === "pro" ? 200 : (profile as any).plan === "premium" ? 9999 : 20;
+        profile.daily_prompt_count = resetCount;
+        profile.last_prompt_date   = todayStr;
+        await updateDoc(profileRef, {
+          daily_prompt_count: resetCount,
+          last_prompt_date:   todayStr,
+        });
+      }
+
+      const saved_items = await getSavedItemIdsForUser(supabase_uid);
+      res.json({ profile: { ...profile, saved_items } });
+    } catch (err: any) {
+      console.error("[Auth] supabase-login error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Auth: Sync active profile details
   app.get("/api/auth/profile", async (req, res) => {
     try {

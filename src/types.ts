@@ -1,12 +1,14 @@
 export interface Profile {
-  id: string;
+  id: string;          // Supabase auth user UUID
   name: string;
   email: string;
-  role: 'student' | 'admin';
+  avatar_url?: string; // Google profile picture
+  role: 'student' | 'mentor' | 'recruiter' | 'admin';
+  plan: 'free' | 'pro' | 'premium';
   daily_prompt_count: number;
   last_prompt_date: string; // YYYY-MM-DD
   created_at: string;
-  saved_items?: string[]; // populated from saved_items collection on auth responses
+  saved_items?: string[];
 }
 
 export interface AITool {
@@ -15,7 +17,7 @@ export interface AITool {
   slug: string;
   description: string;
   category: 'Chatbots' | 'Image Gen' | 'Video Gen' | 'Coding Assistants' | 'Productivity' | 'Research' | 'Resume Builders';
-  pricing: string; // e.g., "Free", "Paid", "Freemium"
+  pricing: string;
   pros: string[];
   cons: string[];
   website_url: string;
@@ -31,7 +33,7 @@ export interface Internship {
   is_remote: boolean;
   stipend: string;
   eligibility: string;
-  deadline: string; // YYYY-MM-DD
+  deadline: string;
   apply_url: string;
   created_at: string;
 }
@@ -42,7 +44,7 @@ export interface Hackathon {
   slug: string;
   organizer: string;
   prize_pool: string;
-  deadline: string; // YYYY-MM-DD
+  deadline: string;
   eligibility: string;
   registration_url: string;
   created_at: string;
@@ -92,4 +94,19 @@ export interface NewsletterSubscriber {
   email: string;
   created_at: string;
   subscribed_to_digest: boolean;
+}
+
+// Auth types
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url?: string;
+}
+
+export interface AuthState {
+  user: AuthUser | null;
+  profile: Profile | null;
+  loading: boolean;
+  initialized: boolean;
 }

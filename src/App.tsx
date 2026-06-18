@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import WelcomeHero from "./components/WelcomeHero";
@@ -9,164 +10,121 @@ import HackathonsPortal from "./components/HackathonsPortal";
 import UserDashboard from "./components/UserDashboard";
 import AdminPanel from "./components/AdminPanel";
 import BlogView from "./components/blog/BlogView";
-import { Profile, AITool, Internship, Hackathon } from "./types";
-import { ShieldAlert, LogIn, Sparkles, BookOpen } from "lucide-react";
+import AuthCallback from "./pages/AuthCallback";
+import { AITool, Internship, Hackathon } from "./types";
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<string>("home");
-  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
-  
-  // Master lists for home grid previews
-  const [allTools, setAllTools] = useState<AITool[]>([]);
+// ──────────────────────────────────────────────────────────────────────────────
+// Inner app (uses auth context)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function AppInner() {
+  const { profile, user, initialized, refreshProfile } = useAuth();
+
+  // Detect /auth/callback route for OAuth redirect handling
+  const isCallback = window.location.pathname === "/auth/callback";
+  if (isCallback) return <AuthCallback />;
+
+  const [activeTab, setActiveTab]         = useState<string>("home");
+  const [allTools, setAllTools]           = useState<AITool[]>([]);
   const [allInternships, setAllInternships] = useState<Internship[]>([]);
   const [allHackathons, setAllHackathons] = useState<Hackathon[]>([]);
-  const [savedItemIds, setSavedItemIds] = useState<string[]>([]);
-  
+  const [savedItemIds, setSavedItemIds]   = useState<string[]>([]);
   const [globalLoading, setGlobalLoading] = useState(true);
 
-  // 1. On Mount: Auto-authenticate student@example.com to make sandbox zero-friction
+  // ── Load public directory data ──────────────────────────────────────────────
   useEffect(() => {
-    const cachedEmail = localStorage.getItem("student_hub_user_email") || "student@example.com";
-    handleAuthenticate(cachedEmail, localStorage.getItem("student_hub_user_name") || "Student Alpha");
     loadDirectoryData();
   }, []);
+
+  // ── Sync saved items whenever profile changes ───────────────────────────────
+  useEffect(() => {
+    if (profile?.saved_items) setSavedItemIds(profile.saved_items);
+    else setSavedItemIds([]);
+  }, [profile]);
+
+  // ── Guard admin tab ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (activeTab === "admin" && profile?.role !== "admin") {
+      setActiveTab("home");
+    }
+    if (activeTab === "dashboard" && !user) {
+      setActiveTab("home");
+    }
+  }, [activeTab, profile, user]);
 
   const loadDirectoryData = async () => {
     try {
       const [toolsRes, internRes, hackRes] = await Promise.all([
         fetch("/api/tools"),
         fetch("/api/internships"),
-        fetch("/api/hackathons")
+        fetch("/api/hackathons"),
       ]);
       const [tData, iData, hData] = await Promise.all([
         toolsRes.json(),
         internRes.json(),
-        hackRes.json()
+        hackRes.json(),
       ]);
-      if (tData.tools) setAllTools(tData.tools);
-      if (iData.internships) setAllInternships(iData.internships);
-      if (hData.hackathons) setAllHackathons(hData.hackathons);
+      if (tData.tools)           setAllTools(tData.tools);
+      if (iData.internships)     setAllInternships(iData.internships);
+      if (hData.hackathons)      setAllHackathons(hData.hackathons);
     } catch (err) {
-      console.error("Error loading directories:", err);
+      console.error("Directory load error:", err);
     } finally {
       setGlobalLoading(false);
     }
   };
 
-  // Sync profile details (such as prompt quotas) from Express backend
-  const syncProfileDetails = async (email: string) => {
-    try {
-      const res = await fetch(`/api/auth/profile?email=${encodeURIComponent(email)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.profile) {
-          setCurrentUser(data.profile);
-          setSavedItemIds(data.profile.saved_items || []);
-        }
-      }
-    } catch (err) {
-      console.error("Error syncing profile:", err);
-    }
-  };
-
-  const handleAuthenticate = async (email: string, name?: string) => {
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name: name || "Developer Student" }),
-      });
-      const data = await res.json();
-      if (data.profile) {
-        setCurrentUser(data.profile);
-        setSavedItemIds(data.profile.saved_items || []);
-        localStorage.setItem("student_hub_user_email", email);
-        if (name) localStorage.setItem("student_hub_user_name", name);
-      }
-    } catch (err) {
-      console.error("Authentication error:", err);
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setSavedItemIds([]);
-    localStorage.removeItem("student_hub_user_email");
-    localStorage.removeItem("student_hub_user_name");
-  };
-
-  // Toggling bookmarks/saves for tools, internships, and hackathons
+  // ── Toggle save / bookmark ──────────────────────────────────────────────────
   const handleToggleSaveItem = async (
-    itemType: 'tool' | 'internship' | 'hackathon', 
+    itemType: "tool" | "internship" | "hackathon",
     itemId: string
   ) => {
-    if (!currentUser) return;
+    if (!profile) return;
     try {
       const res = await fetch("/api/auth/save", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          itemId,
-          itemType
-        }),
+        body: JSON.stringify({ userId: profile.id, itemId, itemType }),
       });
-
       if (res.ok) {
         const data = await res.json();
-        if (data.saved_items) {
-          setSavedItemIds(data.saved_items);
-          // Sync current profile variables
-          syncProfileDetails(currentUser.email);
-        }
+        if (data.saved_items) setSavedItemIds(data.saved_items);
+        await refreshProfile();
       }
     } catch (err) {
-      console.error("Error saving resource item:", err);
+      console.error("Toggle save error:", err);
     }
   };
 
-  return (
-    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-100" id="student-hub-root-app">
-      {/* 1. Header Navigation elements */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        currentUser={currentUser}
-        onLogin={handleAuthenticate}
-        onLogout={handleLogout}
-      />
+  // ── Show login modal helper ─────────────────────────────────────────────────
+  const triggerLoginModal = () => {
+    const btn = document.getElementById("signin-navbar-btn");
+    if (btn) (btn as HTMLButtonElement).click();
+  };
 
-      {/* Developer switcher reminder bar */}
-      <div className="bg-slate-900 border-b border-slate-800/80 px-4 py-2">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-1.5 text-center sm:text-left">
-          <p className="text-[10px] text-indigo-300 font-bold tracking-wider uppercase flex items-center gap-1">
-            <Sparkles className="h-3 w-3 animate-pulse text-amber-400" />
-            <span>Interactive Student Sandbox mode</span>
-          </p>
-          <div className="flex items-center space-x-3 text-[10px]">
-            <span className="text-slate-400 font-medium">Currently testing as: <strong className="text-white">{currentUser?.role === 'admin' ? 'Administrator' : 'Student'}</strong></span>
-            <button
-              onClick={() => {
-                if (currentUser?.role === 'admin') {
-                  handleAuthenticate("student@example.com", "Student Alpha");
-                } else {
-                  handleAuthenticate("shaikbashe1111@gmail.com", "Shaik Basheer");
-                }
-              }}
-              className="text-amber-400 font-extrabold hover:underline cursor-pointer"
-            >
-              [Switch Role]
-            </button>
-          </div>
+  // ── Full-page loading skeleton ──────────────────────────────────────────────
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-10 w-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <p className="text-xs text-slate-500 font-mono">Initializing session…</p>
         </div>
       </div>
+    );
+  }
 
-      {/* 2. Main routers selection */}
-      <main className="flex-grow">
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-100" id="student-hub-root-app">
+      {/* ── Navigation ── */}
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* ── Main content ── */}
+      <main className="flex-grow pb-16 md:pb-0">
         {globalLoading ? (
           <div className="flex h-96 flex-col items-center justify-center space-y-4" id="applet-initializer-screen">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-            <span className="text-xs text-slate-400 font-mono">Formulating database tables...</span>
+            <span className="text-xs text-slate-400 font-mono">Loading platform data…</span>
           </div>
         ) : (
           <div id="tab-viewport-view">
@@ -176,98 +134,99 @@ export default function App() {
                 featuredTools={allTools}
                 featuredInternships={allInternships}
                 featuredHackathons={allHackathons}
-                dailyPromptsRemaining={currentUser?.daily_prompt_count ?? 20}
+                dailyPromptsRemaining={profile?.daily_prompt_count ?? 20}
               />
             )}
 
             {activeTab === "assistant" && (
               <ChatAssistant
-                currentUser={currentUser}
-                onOpenLogin={() => {
-                  // Simply clicking login in assistant raises standard modal
-                  const btn = document.getElementById("signin-navbar-btn");
-                  if (btn) btn.click();
-                }}
-                triggerProfileSync={() => {
-                  if (currentUser) syncProfileDetails(currentUser.email);
-                }}
+                currentUser={profile}
+                onOpenLogin={triggerLoginModal}
+                triggerProfileSync={refreshProfile}
               />
             )}
 
             {activeTab === "tools" && (
               <ToolsDirectory
-                currentUser={currentUser}
+                currentUser={profile}
                 savedItemIds={savedItemIds}
                 onToggleSave={handleToggleSaveItem}
-                onOpenLogin={() => {
-                  const btn = document.getElementById("signin-navbar-btn");
-                  if (btn) btn.click();
-                }}
+                onOpenLogin={triggerLoginModal}
               />
             )}
 
             {activeTab === "internships" && (
               <InternshipsPortal
-                currentUser={currentUser}
+                currentUser={profile}
                 savedItemIds={savedItemIds}
                 onToggleSave={handleToggleSaveItem}
-                onOpenLogin={() => {
-                  const btn = document.getElementById("signin-navbar-btn");
-                  if (btn) btn.click();
-                }}
+                onOpenLogin={triggerLoginModal}
               />
             )}
 
             {activeTab === "hackathons" && (
               <HackathonsPortal
-                currentUser={currentUser}
+                currentUser={profile}
                 savedItemIds={savedItemIds}
                 onToggleSave={handleToggleSaveItem}
-                onOpenLogin={() => {
-                  const btn = document.getElementById("signin-navbar-btn");
-                  if (btn) btn.click();
-                }}
+                onOpenLogin={triggerLoginModal}
               />
             )}
 
             {activeTab === "blog" && (
-              <BlogView
-                currentUser={currentUser}
-                onOpenLogin={() => {
-                  const btn = document.getElementById("signin-navbar-btn");
-                  if (btn) btn.click();
-                }}
-              />
+              <BlogView currentUser={profile} onOpenLogin={triggerLoginModal} />
             )}
 
-            {activeTab === "dashboard" && (
+            {activeTab === "dashboard" && user ? (
               <UserDashboard
-                currentUser={currentUser}
+                currentUser={profile}
                 savedItemIds={savedItemIds}
                 onToggleSave={handleToggleSaveItem}
-                onOpenLogin={() => {
-                  const btn = document.getElementById("signin-navbar-btn");
-                  if (btn) btn.click();
-                }}
+                onOpenLogin={triggerLoginModal}
                 allTools={allTools}
                 allInternships={allInternships}
                 allHackathons={allHackathons}
                 setActiveTab={setActiveTab}
               />
-            )}
+            ) : activeTab === "dashboard" && !user ? (
+              <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+                <div className="text-5xl mb-4">🔒</div>
+                <h2 className="text-xl font-bold text-white mb-2">Sign In Required</h2>
+                <p className="text-slate-400 text-sm mb-6 max-w-xs">Please sign in to access your dashboard and saved items.</p>
+                <button onClick={triggerLoginModal}
+                  className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition active:scale-95">
+                  Sign In
+                </button>
+              </div>
+            ) : null}
 
-            {activeTab === "admin" && (
-              <AdminPanel
-                currentUser={currentUser}
-                triggerDataReload={loadDirectoryData}
-              />
-            )}
+            {activeTab === "admin" && profile?.role === "admin" ? (
+              <AdminPanel currentUser={profile} triggerDataReload={loadDirectoryData} />
+            ) : activeTab === "admin" && profile?.role !== "admin" ? (
+              <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+                <div className="text-5xl mb-4">⛔</div>
+                <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
+                <p className="text-slate-400 text-sm">Admin access only.</p>
+              </div>
+            ) : null}
           </div>
         )}
       </main>
 
-      {/* 3. Global custom footer */}
+      {/* ── Footer ── */}
       <Footer />
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Root — wrap with AuthProvider
+// ──────────────────────────────────────────────────────────────────────────────
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
   );
 }
