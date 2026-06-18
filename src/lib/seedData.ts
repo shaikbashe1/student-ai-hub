@@ -1,6 +1,6 @@
 import { AITool, Internship, Hackathon } from "../types";
 
-export const INITIAL_AI_TOOLS: AITool[] = [
+const RAW_AI_TOOLS = [
   {
     id: "1",
     name: "ChatGPT",
@@ -111,7 +111,17 @@ export const INITIAL_AI_TOOLS: AITool[] = [
   }
 ];
 
-export const INITIAL_INTERNSHIPS: Internship[] = [
+export const INITIAL_AI_TOOLS: AITool[] = RAW_AI_TOOLS.map(t => ({
+  ...t,
+  category: t.category as any,
+  is_featured: false,
+  is_sponsored: false,
+  views: 0,
+  saves: 0,
+  updated_at: t.created_at
+}));
+
+const RAW_INTERNSHIPS = [
   {
     id: "int_1",
     company: "Google",
@@ -192,7 +202,17 @@ export const INITIAL_INTERNSHIPS: Internship[] = [
   }
 ];
 
-export const INITIAL_HACKATHONS: Hackathon[] = [
+export const INITIAL_INTERNSHIPS: Internship[] = RAW_INTERNSHIPS.map(i => ({
+  source: "manual",
+  tags: [],
+  is_sponsored: false,
+  views: 0,
+  saves: 0,
+  updated_at: i.created_at,
+  ...i
+}));
+
+const RAW_HACKATHONS = [
   {
     id: "hack_1",
     name: "ETHGlobal San Francisco",
@@ -249,3 +269,13 @@ export const INITIAL_HACKATHONS: Hackathon[] = [
     created_at: new Date().toISOString()
   }
 ];
+
+export const INITIAL_HACKATHONS: Hackathon[] = RAW_HACKATHONS.map(h => ({
+  tags: [],
+  mode: "online",
+  is_featured: false,
+  views: 0,
+  saves: 0,
+  updated_at: h.created_at,
+  ...h
+}));

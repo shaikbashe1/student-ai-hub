@@ -1,24 +1,39 @@
-/**
- * Analytics tracking helper for Google Analytics 4 (GA4)
- */
-
-export function track(eventName: string, params?: Record<string, any>) {
-  if (typeof window !== "undefined") {
-    // If real gtag is configured, use it
-    if (typeof (window as any).gtag === "function") {
-      (window as any).gtag("event", eventName, params);
-    }
-    
-    // Always log to console in development block to confirm tracking triggers
-    console.info(`[Analytics Tracking]: Event "${eventName}" recorded`, params || {});
-
-    // Option to push to simple local diagnostics or server logs
-    fetch("/api/analytics/track", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventName, params, timestamp: new Date().toISOString() }),
-    }).catch(() => {
-      // Slient catch for offline or standalone states
-    });
+declare global {
+  interface Window {
+    posthog?: {
+      capture: (event: string, props?: Record<string, unknown>) => void;
+      identify: (id: string, props?: Record<string, unknown>) => void;
+      reset: () => void;
+    };
+    gtag?: (...args: unknown[]) => void;
   }
 }
+
+export function trackEvent(event: string, properties: Record<string, unknown> = {}) {
+  if (typeof window === 'undefined') return;
+  if (window.posthog) window.posthog.capture(event, properties);
+  if (window.gtag) window.gtag('event', event, properties);
+}
+
+export function identifyUser(userId: string, traits: Record<string, unknown> = {}) {
+  if (typeof window === 'undefined') return;
+  if (window.posthog) window.posthog.identify(userId, traits);
+  if (window.gtag) window.gtag('set', 'user_id', userId);
+}
+
+export const Analytics = {
+  aiRequestMade: (toolType: string, plan: string) =>
+    trackEvent('ai_request', { tool_type: toolType, plan }),
+  resumeAnalyzed: (atsScore: number) =>
+    trackEvent('resume_analyzed', { ats_score: atsScore }),
+  interviewStarted: (mode: string) =>
+    trackEvent('interview_started', { mode }),
+  challengeSolved: (difficulty: string, language: string) =>
+    trackEvent('challenge_solved', { difficulty, language }),
+  internshipViewed: (company: string, role: string) =>
+    trackEvent('internship_viewed', { company, role }),
+  subscriptionStarted: (plan: string) =>
+    trackEvent('subscription_started', { plan }),
+  pageViewed: (page: string) =>
+    trackEvent('page_view', { page }),
+};

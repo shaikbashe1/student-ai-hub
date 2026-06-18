@@ -26,3 +26,4 @@ firebase-applet-config.json
 *.key
 credentials.json
 secrets.json
+.vercel

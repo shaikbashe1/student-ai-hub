@@ -3,7 +3,7 @@ import {
   Plus, Edit, Trash2, ShieldAlert, Sparkles, FolderPlus, 
   HelpCircle, UserCheck, Trash, ExternalLink, Code2, RefreshCw, BookOpen
 } from "lucide-react";
-import { Profile, AITool, Internship, Hackathon, BlogPost } from "../types";
+import { Profile, AITool, Internship, Hackathon, BlogPost, AIToolCategory } from "../types";
 import BlogEditor from "./blog/BlogEditor";
 
 interface AdminPanelProps {
@@ -615,7 +615,7 @@ export default function AdminPanel({
                 <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">Category</label>
                 <select
                   value={editingTool.category}
-                  onChange={(e) => setEditingTool({ ...editingTool, category: e.target.value })}
+                  onChange={(e) => setEditingTool({ ...editingTool, category: e.target.value as AIToolCategory })}
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-white"
                 >
                   <option value="Chatbots">Chatbots</option>

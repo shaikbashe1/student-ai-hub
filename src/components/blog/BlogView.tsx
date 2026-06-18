@@ -6,12 +6,11 @@ import AdSlot from "../ads/AdSlot";
 import JsonLd from "../seo/JsonLd";
 import { buildBlogPostJsonLd } from "../../lib/seo/schemas";
 import { updateDocumentMetadata } from "../../lib/seo/metadata";
-import { track } from "../../lib/analytics";
+import { trackEvent as track } from "../../lib/analytics";
 import { 
   BookOpen, Search, ArrowLeft, Mail, Check, 
   Clock, Eye, Heart, Share2, Sparkles, AlertCircle 
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 
 interface BlogViewProps {
   currentUser: any | null;
@@ -126,16 +125,12 @@ export default function BlogView({ currentUser, onOpenLogin }: BlogViewProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8" id="student-hub-blog-container">
-      <AnimatePresence mode="wait">
+      <>
         
         {/* VIEW 1: DETAILED POST VIEW */}
         {selectedPost ? (
-          <motion.div
+          <div
             key="detailed-post"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25 }}
             className="space-y-8"
           >
             {/* Inject JSON-LD Rich Schema Tags structurally */}
@@ -167,7 +162,7 @@ export default function BlogView({ currentUser, onOpenLogin }: BlogViewProps) {
               </h1>
 
               <div className="flex flex-wrap items-center gap-4 pt-1.5 text-xs text-slate-400">
-                <span>By <strong className="text-white font-semibold">{selectedPost.author}</strong></span>
+                <span>By <strong className="text-white font-semibold">{selectedPost.author || selectedPost.author_name}</strong></span>
                 <span className="text-slate-700">&bull;</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4 text-slate-500" />
@@ -253,15 +248,12 @@ export default function BlogView({ currentUser, onOpenLogin }: BlogViewProps) {
 
             </div>
 
-          </motion.div>
+          </div>
         ) : (
           
           /* VIEW 2: ALL DIRECTORIES LISTING */
-          <motion.div
+          <div
             key="directory-listing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             className="space-y-8"
           >
             
@@ -384,10 +376,10 @@ export default function BlogView({ currentUser, onOpenLogin }: BlogViewProps) {
               </div>
             )}
 
-          </motion.div>
+          </div>
         )}
 
-      </AnimatePresence>
+      </>
     </div>
   );
 }
